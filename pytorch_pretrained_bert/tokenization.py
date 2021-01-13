@@ -5,13 +5,23 @@
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#     http://www.apache.org/licenses/LICENSE-2.0
+#	 http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+#
+#
+# 한국어 WordPiece 단위 BERT를 위한 Tokenization Class
+# 수정: joonho.lim
+# 일자: 2019-05-23
+#
+# apply syllable input
+# by jisu.Seo
+# 2021.01.12
+
 """Tokenization classes."""
 
 from __future__ import absolute_import
@@ -57,6 +67,12 @@ def load_vocab(vocab_file):
             token = reader.readline()
             if not token:
                 break
+
+            ### joonho.lim @ 2019-03-15
+            if token.find('n_iters=') == 0 or token.find('max_length=') == 0:
+                continue
+            token = token.split('\t')[0]
+
             token = token.strip()
             vocab[token] = index
             index += 1
@@ -92,6 +108,12 @@ class BertTokenizer(object):
     def tokenize(self, text):
         split_tokens = []
         for token in self.basic_tokenizer.tokenize(text):
+            ### joonho.lim @ 2019-03-15
+
+            # apply syllable input
+            # by jisu.Seo
+            # 2021.01.12
+            # token += '_'
             for sub_token in self.wordpiece_tokenizer.tokenize(token):
                 split_tokens.append(sub_token)
         return split_tokens
@@ -172,13 +194,14 @@ class BasicTokenizer(object):
     def tokenize(self, text):
         """Tokenizes a piece of text."""
         text = self._clean_text(text)
-        # This was added on November 1st, 2018 for the multilingual and Chinese
-        # models. This is also applied to the English models now, but it doesn't
-        # matter since the English models were not trained on any Chinese data
-        # and generally don't have any Chinese data in them (there are Chinese
-        # characters in the vocabulary because Wikipedia does have some Chinese
-        # words in the English Wikipedia.).
-        text = self._tokenize_chinese_chars(text)
+        ### joonho.lim @ 2019-03-15
+        # # # This was added on November 1st, 2018 for the multilingual and Chinese
+        # # # models. This is also applied to the English models now, but it doesn't
+        # # # matter since the English models were not trained on any Chinese data
+        # # # and generally don't have any Chinese data in them (there are Chinese
+        # # # characters in the vocabulary because Wikipedia does have some Chinese
+        # # # words in the English Wikipedia.).
+        # # text = self._tokenize_chinese_chars(text)
         orig_tokens = whitespace_tokenize(text)
         split_tokens = []
         for token in orig_tokens:
@@ -313,8 +336,10 @@ class WordpieceTokenizer(object):
                 cur_substr = None
                 while start < end:
                     substr = "".join(chars[start:end])
-                    if start > 0:
-                        substr = "##" + substr
+                    ### joonho.lim @ 2019-03-15
+                    # if start > 0:
+                    # substr = "##" + substr
+                    # print ( '[substr]\t%s\t%s\t%d\t%d' % ( substr, substr in self.vocab, start, end))
                     if substr in self.vocab:
                         cur_substr = substr
                         break
@@ -357,16 +382,19 @@ def _is_control(char):
 
 
 def _is_punctuation(char):
-    """Checks whether `chars` is a punctuation character."""
-    cp = ord(char)
-    # We treat all non-letter/number ASCII as punctuation.
-    # Characters such as "^", "$", and "`" are not in the Unicode
-    # Punctuation class but we treat them as punctuation anyways, for
-    # consistency.
-    if ((cp >= 33 and cp <= 47) or (cp >= 58 and cp <= 64) or
-            (cp >= 91 and cp <= 96) or (cp >= 123 and cp <= 126)):
-        return True
-    cat = unicodedata.category(char)
-    if cat.startswith("P"):
-        return True
-    return False
+    ### joonho.lim @ 2019-03-15
+    return char == ' '
+
+# """Checks whether `chars` is a punctuation character."""
+# cp = ord(char)
+# # We treat all non-letter/number ASCII as punctuation.
+# # Characters such as "^", "$", and "`" are not in the Unicode
+# # Punctuation class but we treat them as punctuation anyways, for
+# # consistency.
+# if ((cp >= 33 and cp <= 47) or (cp >= 58 and cp <= 64) or
+# (cp >= 91 and cp <= 96) or (cp >= 123 and cp <= 126)):
+# return True
+# cat = unicodedata.category(char)
+# if cat.startswith("P"):
+# return True
+# return False
